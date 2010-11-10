@@ -24,12 +24,7 @@ Babel.prototype.connect = function() {
     this.connect();
   });
   
-  if (this.socket.connect().connected === 'false') {
-    var self = this;
-    setTimeout(function() {
-      self.connect();
-    }, 5000);
-  }
+  this.socket.connect();
 };
 
 Babel.prototype.send = function(message) {

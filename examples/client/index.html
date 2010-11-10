@@ -31,7 +31,9 @@
       babel = Babel();
       
       babel.on('message', function(message) {
-        $("ul#chat").append('<li>' + message + '</li>');
+        $chat = $("ul#chat");
+        $chat.append('<li>' + message + '</li>');
+        $chat.attr('scrollTop', $chat.attr('scrollHeight'));
       });
       
       $('form#chat_message').bind('submit', function() {
