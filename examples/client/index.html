@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      
+      ul#chat {
+        height: 300px;
+        padding: 0;
+        margin: 0;
+        overflow-y: auto;
+        list-style: none;
+      }
+      
+      form#chat_message {
+        padding-top: 5px;
+      }
+    </style>
+    <script type="text/javascript" src="jquery-1.4.3.min.js"></script>
+  </head>
+  <body>
+    <h1>Chat</h1>
+    <ul id="chat"></ul>
+    <form id="chat_message" action="" method="post">
+      <input type="text" name="message" id="message">
+      <input type="submit" value="Send">
+    </form>
+    <script src="http://localhost:8000/babel.js"></script> 
+    <script>
+    var babel; // for dev only
+    $(function() {
+      babel = Babel();
+      
+      babel.on('message', function(message) {
+        $("ul#chat").append('<li>' + message + '</li>');
+      });
+      
+      $('form#chat_message').bind('submit', function() {
+        var message_input = $("form#chat_message input#message");
+        babel.send(message_input.attr("value"));
+        message_input.attr("value","");
+        message_input.focus();
+        return false;
+      });
+    });
+    </script>
+  </body>
+</html>
