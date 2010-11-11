@@ -28,7 +28,9 @@
     <script>
     var babel; // for dev only
     $(function() {
-      babel = Babel();
+      babel = Babel({
+        channels: [1]
+      });
       
       babel.on('message', function(message) {
         $chat = $("ul#chat");

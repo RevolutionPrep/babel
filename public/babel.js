@@ -1,41 +1,78 @@
-function Babel() {
+function Babel(options) {
   if(! (this instanceof arguments.callee)) { // forces the use of new
     return new arguments.callee(arguments);
   }
+  var loadWithChannels = [];
+  if (options[0] && options[0].channels) { loadWithChannels = options[0].channels };
   
-  var self = this;
-  self.connect();
+  this.settings = {
+    subscribedChannels: []
+  , pendingChannels: loadWithChannels
+  }
+  this.connect();
+  
+  this.socket.send({
+    subscription: true
+  , channels: this.settings.pendingChannels
+  });
 };
 
 Babel.prototype.connect = function() {
+  var self = this;
   console.log('connecting...');
-  this.socket = new io.Socket('localhost', { port: 8000 });
+  self.socket = new io.Socket('localhost', { port: 8000 });
 
-  this.socket.addListener('connect', function(){
+  self.socket.addListener('connect', function(){
     console.log('connected!');
   });
 
-  this.socket.addListener('message', function(){
-    
+  self.socket.addListener('message', function(data){
+    if (data.subscription === true) {
+      var i = data.channels.length, x;
+      while(i--) {
+        self.settings.subscribedChannels.push(data.channels[i]);
+        x = self.settings.pendingChannels.indexOf(data.channels[i]);
+        self.settings.pendingChannels.splice(x, 1);
+      }
+    } else {
+      self.triggerEventsFor('message', data.payload);
+    }
   });
 
-  this.socket.addListener('disconnect', function(){
+  self.socket.addListener('disconnect', function(){
     console.log('disconnected!');
-    this.connect();
+    self.connect();
   });
   
-  this.socket.connect();
+  self.socket.connect();
 };
 
 Babel.prototype.send = function(message) {
-  this.socket.send(message);
+  this.socket.send({
+    message: true
+  , payload: message
+  , channels: this.settings.subscribedChannels
+  });
 }
 
 Babel.prototype.on = function(event, callback) {
-  if (event in { 'message':1, 'connect':1, 'disconnect':1 }) {
-    this.socket.addListener(event, callback);
+  if (event in this._Events) {
+    this._Events[event].push(callback);
   } else {
     console.log("Babel does not support the '" + event + "' event.");
+  }
+}
+
+Babel.prototype._Events = {
+  message:    []
+, connect:    []
+, disconnect: []
+}
+
+Babel.prototype.triggerEventsFor = function(event, data) {
+  var i = this._Events[event].length;
+  while(i--) {
+    this._Events[event][i](data);
   }
 }
 
