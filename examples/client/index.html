@@ -24,23 +24,41 @@
       <input type="text" name="message" id="message">
       <input type="submit" value="Send">
     </form>
-    <script src="http://localhost:8000/babel.js"></script> 
+    <form id="chat_username" action="" method="post">
+      <label for="name">Set Username:</label>
+      <input type="text" name="name" id="name">
+      <input type="submit" value="Set">
+    </form>
+    <script src="http://192.168.11.214:8000/babel.js"></script> 
     <script>
     var babel; // for dev only
     $(function() {
       babel = Babel({
         channels: [1]
+      , username: null
       });
       
-      babel.on('message', function(message) {
+      babel.on('message', function(data) {
         $chat = $("ul#chat");
-        $chat.append('<li>' + message + '</li>');
+        $chat.append('<li>' + data.username + ': ' + data.message + '</li>');
         $chat.attr('scrollTop', $chat.attr('scrollHeight'));
+      });
+      
+      $('form#chat_message').hide();
+      
+      $('form#chat_username').bind('submit', function() {
+        babel.setUsername($("form#chat_username input#name").attr("value"));
+        $(this).hide();
+        $('form#chat_message').show();
+        return false;
       });
       
       $('form#chat_message').bind('submit', function() {
         var message_input = $("form#chat_message input#message");
-        babel.send(message_input.attr("value"));
+        babel.send({
+          username: babel.settings.username
+        , message: message_input.attr("value")
+        });
         message_input.attr("value","");
         message_input.focus();
         return false;

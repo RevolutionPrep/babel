@@ -3,53 +3,56 @@ function Babel(options) {
     return new arguments.callee(arguments);
   }
   var loadWithChannels = [];
+  var loadWithUsername = "";
   if (options[0] && options[0].channels) { loadWithChannels = options[0].channels };
+  if (options[0] && options[0].username) { loadWithUsername = options[0].username };
   
   this.settings = {
-    subscribedChannels: []
+    username: loadWithUsername
+  , subscribedChannels: []
   , pendingChannels: loadWithChannels
   }
   this.connect();
-  
   this.socket.send({
-    subscription: true
+    type: 'subscription'
   , channels: this.settings.pendingChannels
   });
 };
 
+Babel.prototype.setUsername = function(username) {
+  this.settings.username = username;
+}
+
 Babel.prototype.connect = function() {
   var self = this;
   console.log('connecting...');
-  self.socket = new io.Socket('localhost', { port: 8000 });
+  this.socket = new io.Socket('192.168.11.214', { port: 8000 });
 
-  self.socket.addListener('connect', function(){
+  this.socket.addListener('connect', function(){
     console.log('connected!');
   });
 
-  self.socket.addListener('message', function(data){
-    if (data.subscription === true) {
-      var i = data.channels.length, x;
-      while(i--) {
-        self.settings.subscribedChannels.push(data.channels[i]);
-        x = self.settings.pendingChannels.indexOf(data.channels[i]);
-        self.settings.pendingChannels.splice(x, 1);
-      }
-    } else {
-      self.triggerEventsFor('message', data.payload);
-    }
+  this.socket.addListener('message', function(data){
+    self.handleMessage(data);
   });
 
-  self.socket.addListener('disconnect', function(){
+  this.socket.addListener('disconnect', function(){
     console.log('disconnected!');
-    self.connect();
+    setTimeout(function() {
+      self.connect();
+      self.socket.send({
+        type: 'subscription'
+      , channels: self.settings.subscribedChannels
+      });
+    }, 500);
   });
   
-  self.socket.connect();
+  this.socket.connect();
 };
 
 Babel.prototype.send = function(message) {
   this.socket.send({
-    message: true
+    type: 'message'
   , payload: message
   , channels: this.settings.subscribedChannels
   });
@@ -73,6 +76,27 @@ Babel.prototype.triggerEventsFor = function(event, data) {
   var i = this._Events[event].length;
   while(i--) {
     this._Events[event][i](data);
+  }
+}
+
+Babel.prototype.handleMessage = function(data) {
+  switch(data.type) {
+    case 'subscription':
+      var i = data.channels.length, x;
+      while(i--) {
+        console.log(this.settings.subscribedChannels.indexOf(data.channels[i]));
+        if (this.settings.subscribedChannels.indexOf(data.channels[i]) === -1) this.settings.subscribedChannels.push(data.channels[i]);
+        x = this.settings.pendingChannels.indexOf(data.channels[i]);
+        this.settings.pendingChannels.splice(x, 1);
+      }
+      break;
+    
+    case 'message':
+      this.triggerEventsFor('message', data.payload);
+      break;
+    
+    default:
+      console.log('ERROR', data);
   }
 }
 
